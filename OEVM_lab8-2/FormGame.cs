@@ -13,57 +13,62 @@ namespace OEVM_lab8_2
 {
     public partial class FormGame : Form
     {
-        System.Windows.Forms.Timer myTimer = new System.Windows.Forms.Timer();
-        StartIcon startIcon;
+        Timer timer;
         Field field;
         Ball ball;
         Platform platform;
-        bool flag = false; //for pictureBox_click
+        bool isStartIconActive;
         public FormGame()
         {
             InitializeComponent();
-            startIcon = new StartIcon();
-            field = new Field();
-            ball = new Ball();
-            platform = new Platform();
+            timer = new Timer();
+            field = new Field(40);
+            ball = new Ball(-4, -3, 300, 100);
+            platform = new Platform(300, 500, 100, 10);
+            isStartIconActive = false;
         }
-
-        private void Form1_Load(object sender, EventArgs e)
+        void FormGame_Load(object sender, EventArgs e)
         {
             DrawStart();
             textBoxCount.Text = "";
         }
-        private void DrawStart()
+        void DrawStart()
         {
             Bitmap bmp = new Bitmap(pictureBox.Width, pictureBox.Height);
             Graphics gr = Graphics.FromImage(bmp);
-            startIcon.DrawStart(gr, pictureBox.Width, pictureBox.Height);
+            DrawStartIcon(gr);
             pictureBox.Image = bmp;
         }
-        private void DrawField()
+        void DrawField()
         {
             Bitmap bmp = new Bitmap(pictureBox.Width, pictureBox.Height);
             Graphics gr = Graphics.FromImage(bmp);
-            field.Draw(gr, pictureBox.Width, pictureBox.Height);
+            field.Draw(gr);
             ball.Draw(gr);
             platform.Draw(gr);
             pictureBox.Image = bmp;
         }
-
-        private void pictureBox_Click(object sender, EventArgs e)
+        void DrawStartIcon(Graphics g)
         {
-            if (flag) return;
-            myTimer.Tick += new EventHandler(TimerEventProcessor);
-            myTimer.Interval = 5;
-            DrawField();
-            myTimer.Start();
-            flag = true;
+            string text = "НАЖМИТЕ ЧТОБЫ\n    НАЧАТЬ ИГРУ";
+            SolidBrush brush = new SolidBrush(Color.Black);
+            Font roman = new Font("Times New Roman", 26, FontStyle.Bold);
+            g.DrawString(text, roman, brush, 120, 250);
         }
-        private void TimerEventProcessor(Object myObject,
-                                            EventArgs myEventArgs)
+
+        void PictureBox_Click(object sender, EventArgs e)
         {
-            ball.x += ball.vx;
-            ball.y += ball.vy;
+            if (isStartIconActive) 
+                return;
+            timer.Tick += new EventHandler(TimerEventProcessor);
+            timer.Interval = 1;
+            DrawField();
+            timer.Start();
+            isStartIconActive = true;
+        }
+        void TimerEventProcessor(Object myObject, EventArgs myEventArgs)
+        {
+            ball.Move();
             CheckIfWall();
             CheckFall();
             CheckPlatform();
@@ -72,84 +77,93 @@ namespace OEVM_lab8_2
             CheckWin();
             DrawField();
         }
-        private void CheckIfWall()
+        void CheckIfWall()
         {
-            if ((ball.x > 585)||(ball.x <= 10)) ball.vx = -ball.vx;
-            if (ball.y <= 0) ball.vy = -ball.vy;
+            if ((ball.X > 585) || (ball.X <= 10)) 
+                ball.Vx = - ball.Vx;
+            if (ball.Y <= 0) 
+                ball.Vy = - ball.Vy;
         }
-        private void CheckFall()
+        void CheckFall()
         {
-            if (ball.y >= 555)
+            if (ball.Y >= 555)
             {
-                myTimer.Stop();
+                timer.Stop();
                 MessageBox.Show("Игра окончена", "GameOver", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 System.Threading.Thread.Sleep(750);
                 Application.Exit();
             }
         }
-        private void CheckWin()
+        void CheckWin()
         {
             if(!field.CheckAnyAlive())
             {
-                myTimer.Stop();
+                timer.Stop();
                 MessageBox.Show("Победа", "Win", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 System.Threading.Thread.Sleep(1000);
                 Application.Exit();
             }
         }
-        private void CheckPlatform()
+        void CheckPlatform()
         {
-            if((ball.y == platform.y)
-                && (ball.x <= platform.x + platform.platformWidth)
-                &&(ball.x >= platform.x))
+            if((ball.X <= platform.X + platform.Width) &&
+                    (ball.X >= platform.X) && (ball.Y >= platform.Y) &&
+                    (ball.Y <= platform.Y + platform.Height))
             {
-                ball.vy = -ball.vy;
+                ball.Vy *= -1;
             }
         }
-        private void CheckBlock()
+        void CheckBlock()
         {
             int curX = 30;
             int curY = 30;
-            for (int i = 0; i < field.isAlive.Length; i++)
+            for (int i = 0; i < field.IsAlive.Length; i++)
             {
-                if (field.isAlive[i])
+                if (field.IsAlive[i])
                 {
-                    if ((Math.Abs(ball.x - curX) <= 15) && (Math.Abs(ball.y - curY) <= 15))
+                    if ((Math.Abs(ball.X - curX) <= 15) && (Math.Abs(ball.Y - curY) <= 15))
                     {
                         Random rand = new Random();
                         int flag = rand.Next(0, 1);
-                        field.isAlive[i] = false;
+                        field.IsAlive[i] = false;
                         if (flag == 1)
                         {
-                            ball.vx = -ball.vx;
-                        } else
+                            ball.Vx = - ball.Vx;
+                        } 
+                        else
                         {
-                            ball.vy = -ball.vy;
+                            ball.Vy = - ball.Vy;
                         }                     
                     }                    
                 }
-                curX += field.blockSize + 5;
+                curX += field.BlockSize + 5;
             }
         }
-        private void UpdateCount()
+        void UpdateCount()
         {
             int count = 0;
-            for (int i = 0; i < field.isAlive.Length; i++)
+            for (int i = 0; i < field.IsAlive.Length; i++)
             {
-                if (field.isAlive[i]) count++;
+                if (field.IsAlive[i]) 
+                    count++;
             }
             textBoxCount.Text = "Осталось: " + count;
         }
-
-        private void textBoxCount_KeyPress(object sender, KeyPressEventArgs e)
+        void TextBoxCount_KeyPress(object sender, KeyPressEventArgs e)
         {
             switch (e.KeyChar)
             {
                 case 'a':
-                    platform.x -= 40;
+                    platform.Move(Direction.Left);
                     break;
                 case 'd':
-                    platform.x += 40;
+                    platform.Move(Direction.Right);
+                    break;
+                case 'ф':
+                    platform.Move(Direction.Left);
+                    break;
+                case 'в':
+                    platform.Move(Direction.Right);
                     break;
                 default:
                     break;
